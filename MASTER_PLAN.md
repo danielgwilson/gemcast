@@ -1,115 +1,77 @@
-# Master Plan: Gemini AI Podcast Platform
+# Master Plan: Gemini Vibe (November 2025)
 
-This document outlines the master plan for developing a Gemini AI-based podcast content platform, synthesizing the findings from our initial research phase.
+This document contains the definitive, up-to-date implementation plan for the Gemini Vibe platform. It reflects our decision to build a manual-start prototype that leverages the latest, generally available Google Cloud and AI services as of November 2025.
 
 ## 1. Project Vision
 
-To create a seamless platform that leverages Gemini AI and Google Cloud services to handle the entire podcasting lifecycle: from idea generation and interview preparation to fully automated recording via Google Meet, AI-powered "Vibe Editing," and final production.
+To create a seamless platform that leverages **Gemini 2.5 Pro** and Google Cloud services to handle the entire podcasting lifecycle: from idea generation and interview preparation to post-production, AI-powered "Vibe Editing," and asset generation.
 
-## 2. Core Technology Stack
+## 2. Core Technology & Services
 
--   **Frontend:** Next.js / React
--   **Backend:** Node.js / TypeScript
--   **Cloud Provider:** Google Cloud Platform
--   **AI Engine:** Google Gemini API
--   **Meeting/Recording:** Google Meet (via Media API)
+-   **Frontend:** Next.js / React (on Vercel)
+-   **Backend API:** Next.js API Routes (on Vercel)
+-   **Heavy Lifting / Processing:** Google Cloud Run
+-   **AI Engine:** **Gemini 2.5 Pro** (via its GA API)
+-   **Meeting Creation:** Google Meet REST API
+-   **File Ingestion:** Google Drive API (with Webhooks)
+-   **Media Processing:** **Google Cloud Transcoder API**
 -   **Transcription:** Google Cloud Speech-to-Text API
--   **Audio Generation:** Google Cloud Text-to-Speech API
+-   **Image Generation:** **Imagen 2** (via Vertex AI)
+-   **Database:** Vercel Postgres (or similar)
+-   **File Storage:** Google Cloud Storage
 
-## 3. Key Architectural Decisions & Features
-
-### 3.1. Google Meet Integration & Recording
-
-This is the most critical and complex part of the project. With the confirmation of Media API access, we can proceed with a fully automated solution.
-
--   **Decision:** We will build a custom recording solution. This provides the best user experience and gives us full control over the recording and transcription process.
--   **Action Item:** Begin development of the recording bot/service.
--   **Implementation:**
-    1.  Use the **Google Meet REST API** to create and manage meeting spaces.
-    2.  Use the **Google Meet Add-ons SDK** to build a custom in-meeting control panel. This panel will be the user's main interface for managing the podcast session.
-    3.  Use the **Google Meet Media API** to have a service join the meeting and capture the raw audio stream.
-
-### 3.2. Transcription
-
--   **Decision:** Use the Google Cloud Speech-to-Text API for all transcription.
--   **Implementation:**
-    1.  Pipe the real-time audio stream from our Media API service to the **Speech-to-Text API's Streaming Recognition** endpoint.
-    2.  Use the **Speaker Diarization** feature to identify and label speakers in the transcript.
-    3.  Store the generated transcript for post-production.
-
-### 3.3. The "Vibe Editing" Engine
-
-This will be the platform's signature feature.
-
--   **Decision:** Leverage the Gemini API for all content generation and transformation tasks.
--   **Implementation:**
-    1.  **Idea Generation:** Create a UI where users can input a topic and have Gemini generate episode ideas, guest questions, and talking points.
-    2.  **Scripting:** Allow users to generate full scripts from prompts or existing documents.
-    3.  **Vibe Editor:** Build an interface where users can load a transcript, select a target "vibe" (e.g., "Funny & Casual," "Serious & Authoritative"), and have Gemini rewrite the content to match. This is a text-based operation on the transcript.
-
-### 3.4. Audio Production
-
--   **Decision:** Use the Google Cloud Text-to-Speech API for generating audio for intros, outros, and other segments.
--   **Implementation:**
-    1.  Create a simple interface for users to input text.
-    2.  Allow users to select from a variety of AI-generated voices.
-    3.  Generate the audio file and make it available for download or integration into the final podcast.
-
-## 4. Actionable Implementation Plan (Manual Prototype)
-
-This revised plan focuses on a simpler, manual-start prototype. The core of this phase is building a robust post-production pipeline that automatically retrieves meeting artifacts after the user manually records a session.
+## 3. Actionable Implementation Plan
 
 ### Phase 1: Build the Post-Production & Vibe Editing Pipeline
 
-**Step 1: Create the Google Meet API Wrapper & Session Management**
--   **Task:** Develop a server-side module (`/src/lib/google-meet.ts`) for the Meet REST API and an API endpoint (`/src/app/api/sessions/create/route.ts`) to start a session.
--   **Functionality:**
-    -   The frontend calls this endpoint.
-    -   The endpoint uses the user's token to create a Google Meet space.
-    -   It saves the `conferenceRecord` ID and user details to our database.
-    -   It returns the `meetingUri` to the frontend, which redirects the user.
--   **Outcome:** A user can create and launch a new, tracked podcast meeting.
+**Step 1: Session Creation & Management**
+-   **Task:** Create a Next.js API route (`/api/sessions/create`) that uses the user's OAuth token to create a Google Meet space via the REST API.
+-   **Functionality:** This endpoint will save a record of the session to our database and redirect the user to the Meet URL.
+-   **User Action:** The user joins the meeting and **manually clicks "Record."**
 
-**Step 2: Implement the Google Drive Webhook**
--   **Task:** This is the core of the new architecture. We need to build the system that gets notified when recordings are ready.
+**Step 2: Google Drive Webhook & Cloud Run Trigger**
+-   **Task:** Create two API endpoints on Vercel: one to set up the Google Drive webhook, and one to receive the notifications.
 -   **Functionality:**
-    -   Create a new API endpoint (`/src/app/api/webhooks/google-drive/route.ts`) to receive notifications from Google.
-    -   When a user starts a session (in Step 1), our backend will use the Google Drive API to subscribe to changes in that user's "Meet Recordings" folder, pointing the subscription to our webhook URL.
-    -   The webhook handler will securely process incoming notifications to identify when a new recording or transcript has been added.
--   **Outcome:** A mechanism for Google to tell us the instant a user's podcast files are ready.
+    -   When a session is created, we tell the Google Drive API to watch the user's "Meet Recordings" folder.
+    -   When a new recording appears, the webhook on Vercel receives the notification.
+    -   The Vercel function immediately triggers a new job on **Google Cloud Run**, passing along the file details. This keeps the Vercel function light and fast.
 
-**Step 3: Build the File Processing Service**
--   **Task:** Create a backend service that acts on the webhook notifications.
+**Step 3: The Cloud Run Processing Job**
+-   **Task:** Build a containerized service on Google Cloud Run to handle all the heavy lifting.
 -   **Functionality:**
-    -   When the webhook is triggered, this service will use the information in the notification to access the user's Google Drive.
-    -   It will download the relevant recording (MP4) and transcript (Google Doc) files.
-    -   It will convert the Google Doc transcript into plain text.
-    -   It will associate the downloaded files with the correct session in our database and mark it as "Ready for Editing."
--   **Outcome:** An automated pipeline that ingests podcast recordings and transcripts into our system.
+    1.  **Download:** The job uses the Google Drive API to download the `.mp4` recording and export the transcript from Google Docs as plain text.
+    2.  **Transcode:** It calls the **Transcoder API** to extract a high-quality audio file (e.g., FLAC) from the `.mp4`.
+    3.  **Store:** It uploads the audio file and the text transcript to a Google Cloud Storage bucket.
+    4.  **Update DB:** It updates the session's record in our database with the file locations and sets the status to "Transcribing."
 
-**Step 4: Frontend UI & Dashboard**
--   **Task:** Create the user-facing dashboard.
+**Step 4: Deep Analysis with Gemini 2.5 Pro**
+-   **Task:** Create a second Cloud Run job (or a subsequent step in the first) that runs after transcription.
+-   **Functionality:**
+    -   It takes the full, raw transcript.
+    -   It sends the entire transcript to **Gemini 2.5 Pro** in a single call.
+    -   It prompts the model to generate a rich JSON object containing a summary, show notes, chapters, and key quotes.
+    -   It saves this structured data back to our database and updates the session status to "Ready for Vibe Editing."
+
+**Step 5: Frontend Dashboard & UI**
+-   **Task:** Build the user's main dashboard in our Next.js app.
 -   **Functionality:**
     -   A "Start New Podcast Session" button.
-    -   A list of all past sessions.
-    -   The status of each session (e.g., "In Progress," "Processing," "Ready for Vibe Editing").
--   **Outcome:** The user's central hub for managing their podcasting workflow.
+    -   A list of all sessions with their current status (e.g., "Processing," "Ready for Vibe Editing").
+    -   A view for a completed session that displays the transcript and all the AI-generated analysis.
 
 ---
 
-### Phase 2: Vibe Editing & Post-Production
+### Phase 2: Vibe Editing & Asset Generation
 
--   **Task:** With the files now in our system, we can build the "Vibe Editing" feature.
+-   **Task:** Build the core "Vibe Editing" interface.
 -   **Functionality:**
-    -   Allow users to select a "Ready" transcript from their dashboard.
-    -   Provide the UI to choose a "vibe."
-    -   Use the Gemini API to rewrite the text.
-    -   Implement AI-powered show notes and summary generation.
+    -   The user selects a target "vibe."
+    -   We send the full transcript and the vibe to **Gemini 2.5 Pro** to get the rewritten version.
+    -   Add a "Generate Cover Art" button that uses the summary to prompt **Imagen 2** and create episode artwork.
 
-### Phase 3: Advanced Features & Automation (Future)
+### Phase 3: Full Automation (Future)
 
--   **Task:** If we choose to pursue full automation in the future, we can revisit the real-time recording service.
+-   **Task:** If desired, replace the manual recording step with a real-time, automated solution.
 -   **Functionality:**
-    -   Develop the custom recording service using the Google Meet Media API.
-    -   Build the in-meeting Add-on for live transcription.
-    -   Integrate Gemini-powered idea generation and scripting tools.
+    -   Build a new Cloud Run service that uses the Google Meet Media API to join calls and capture audio in real-time.
+    -   Build a Google Meet Add-on for a live, in-call control panel.

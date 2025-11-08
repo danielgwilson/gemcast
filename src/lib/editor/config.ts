@@ -15,9 +15,9 @@ export const documentSchema = new Schema({
 
 export function headingRule(level: number) {
   return textblockTypeInputRule(
-    new RegExp(`^(#{1,${level}})\s$`),
+    new RegExp(`^(#{1,${level}})s$`),
     documentSchema.nodes.heading,
-    () => ({ level })
+    () => ({ level }),
   );
 }
 

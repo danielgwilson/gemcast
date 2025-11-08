@@ -192,7 +192,7 @@ const ReadingLevelSelector = ({
                 {
                   "bg-primary text-primary-foreground": currentLevel !== 2,
                   "bg-background text-foreground": currentLevel === 2,
-                }
+                },
               )}
               drag="y"
               dragConstraints={{ top: -dragConstraints, bottom: 0 }}
@@ -324,7 +324,7 @@ const PureToolbar = ({
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // @ts-ignore
+  // @ts-expect-error
   useOnClickOutside(toolbarRef, () => {
     setIsToolbarVisible(false);
     setSelectedTool(null);
@@ -362,7 +362,7 @@ const PureToolbar = ({
   }, [status, setIsToolbarVisible]);
 
   const artifactDefinition = artifactDefinitions.find(
-    (definition) => definition.kind === artifactKind
+    (definition) => definition.kind === artifactKind,
   );
 
   if (!artifactDefinition) {

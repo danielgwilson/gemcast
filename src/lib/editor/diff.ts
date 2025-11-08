@@ -2,8 +2,14 @@
 // It is based on the prosemirror-changeset library, but adapted to our needs.
 // The original library can be found at https://github.com/prosemirror/prosemirror-changeset
 
-import { Change, ChangeSet } from "prosemirror-changeset";
-import type { Node as ProsemirrorNode, Schema } from "prosemirror-model";
+import { type Change, ChangeSet } from "prosemirror-changeset";
+import {
+  Fragment,
+  type Node as ProsemirrorNode,
+  type Schema,
+  Slice,
+} from "prosemirror-model";
+import { Step } from "prosemirror-transform";
 
 export enum DiffType {
   Inserted = "inserted",
@@ -13,14 +19,17 @@ export enum DiffType {
 export function diffEditor(
   schema: Schema,
   oldDoc: any,
-  newDoc: any
+  newDoc: any,
 ): ProsemirrorNode {
   const oldNode = schema.nodeFromJSON(oldDoc);
   const newNode = schema.nodeFromJSON(newDoc);
 
-  const changeSet = ChangeSet.create(oldNode).addSteps(newNode, [
-    ...getReplaceStep(oldNode, newNode),
-  ]);
+  const steps = getReplaceStep(oldNode, newNode).map((step) =>
+    Step.fromJSON(schema, step),
+  );
+  const maps = steps.map((step) => step.getMap());
+
+  const changeSet = ChangeSet.create(oldNode).addSteps(newNode, maps, []);
 
   const diffedNode = applyChangeSet(schema, oldNode, changeSet.changes);
 
@@ -48,7 +57,7 @@ function getReplaceStep(oldDoc: ProsemirrorNode, newDoc: ProsemirrorNode) {
 function applyChangeSet(
   schema: Schema,
   node: ProsemirrorNode,
-  changes: readonly Change[]
+  changes: readonly Change[],
 ): ProsemirrorNode {
   let modifiedNode = node;
 
@@ -67,13 +76,13 @@ function applyChangeSet(
 
           const textNode = schema.text(
             node.text?.substring(from - pos, to - pos) ?? "",
-            [insertedMark]
+            [insertedMark],
           );
 
-          modifiedNode = modifiedNode.replaceWith(
+          modifiedNode = modifiedNode.replace(
             pos + (from - pos),
             pos + (to - pos),
-            textNode
+            new Slice(Fragment.from(textNode), 0, 0),
           );
         }
       });
@@ -95,7 +104,11 @@ function applyChangeSet(
           deletedMark,
         ]);
 
-        modifiedNode = modifiedNode.replaceWith(from, from, textNode);
+        modifiedNode = modifiedNode.replace(
+          from,
+          from,
+          new Slice(Fragment.from(textNode), 0, 0),
+        );
       }
     });
   });

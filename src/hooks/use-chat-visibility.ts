@@ -8,8 +8,8 @@ import {
   type ChatHistory,
   getChatHistoryPaginationKey,
 } from "@/components/sidebar-history";
-import type { Chat } from "@/lib/db/schema";
 import type { VisibilityType } from "@/components/visibility-selector";
+import type { Chat } from "@/lib/db/schema";
 
 export function useChatVisibility({
   chatId,
@@ -26,14 +26,16 @@ export function useChatVisibility({
     null,
     {
       fallbackData: initialVisibilityType,
-    }
+    },
   );
 
   const visibilityType = useMemo(() => {
     if (!history) {
       return localVisibility;
     }
-    const chat = history.chats.find((currentChat: Chat) => currentChat.id === chatId);
+    const chat = history.chats.find(
+      (currentChat: Chat) => currentChat.id === chatId,
+    );
     if (!chat) {
       return "private";
     }

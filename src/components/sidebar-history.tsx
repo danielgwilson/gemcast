@@ -72,13 +72,13 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
       lastWeek: [],
       lastMonth: [],
       older: [],
-    } as GroupedChats
+    } as GroupedChats,
   );
 };
 
 export function getChatHistoryPaginationKey(
   pageIndex: number,
-  previousPageData: ChatHistory
+  previousPageData: ChatHistory,
 ) {
   if (previousPageData && previousPageData.hasMore === false) {
     return null;
@@ -213,7 +213,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
             {paginatedChatHistories &&
               (() => {
                 const chatsFromHistory = paginatedChatHistories.flatMap(
-                  (paginatedChatHistory) => paginatedChatHistory.chats
+                  (paginatedChatHistory) => paginatedChatHistory.chats,
                 );
 
                 const groupedChats = groupChatsByDate(chatsFromHistory);
@@ -250,7 +250,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
-                            onDelete={(chatId) => {
+                            onDelete={(chatId: string) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
                             }}
@@ -270,7 +270,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
-                            onDelete={(chatId) => {
+                            onDelete={(chatId: string) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
                             }}
@@ -290,7 +290,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
-                            onDelete={(chatId) => {
+                            onDelete={(chatId: string) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
                             }}
@@ -310,7 +310,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                             chat={chat}
                             isActive={chat.id === id}
                             key={chat.id}
-                            onDelete={(chatId) => {
+                            onDelete={(chatId: string) => {
                               setDeleteId(chatId);
                               setShowDeleteDialog(true);
                             }}

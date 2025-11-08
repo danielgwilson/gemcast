@@ -2,22 +2,19 @@
 
 ## Research Summary
 
-The standard Google Meet REST API **does not support programmatically starting or stopping a meeting *recording file***. However, the project has been granted the necessary OAuth scopes for the **Google Meet Media API**, which provides real-time access to a meeting's audio and video streams.
-
-This is a critical distinction:
-- We **cannot** tell Google Meet to "create a recording file" via an API.
-- We **can** access the live audio stream during the meeting and create our own recording from it.
+The core of our prototype's recording workflow relies on the user manually initiating a recording within Google Meet. Our application does not programmatically start or stop the recording process.
 
 ### Key Findings:
 
-1.  **No Direct Recording Control (REST API):** The core limitation of the standard REST API remains. It cannot trigger the creation of a recording file in the user's Google Drive.
+1.  **Manual Recording Workflow:** The user is responsible for starting the recording and transcription features using the standard Google Meet interface during the call.
 
-2.  **Real-time Media Access (Media API):** The project has the required permissions (`.../auth/meetings.media.audio.readonly`) to access the live audio stream of a meeting. This allows us to build a custom recording solution.
+2.  **Post-Meeting Artifacts:** The Google Meet REST API is used by our application *before* the meeting to create the space. Our primary interaction with the recording itself happens *after* the meeting, via the Google Drive API.
 
-3.  **Custom Solution Required:** To achieve full automation, we will build a service (a "bot") that joins the meeting, captures the audio stream via the Media API, and processes it in real-time.
+3.  **Google Drive Integration:** Recordings and transcripts are automatically saved to the user's "Meet Recordings" folder in Google Drive. Our application will be notified of their arrival via webhooks.
+
+4.  **Media API (Postponed):** We are **not** using the Google Meet Media API for real-time audio capture in the current phase of the project. This functionality is reserved for a potential future upgrade to full automation.
 
 ## Implications for the Project
 
-- The path is clear for a fully automated, seamless recording experience.
-- The previous blocker of needing to apply for a developer preview is removed.
-- Our core development effort will be focused on building a robust service that utilizes the Google Meet Media API to capture audio and the Google Cloud Speech-to-Text API for real-time transcription.
+-   This approach simplifies the initial development effort significantly.
+-   The core technical challenge shifts from real-time stream processing to a robust post-production pipeline for handling files from Google Drive.
