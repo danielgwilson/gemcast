@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getServerSession } from "next-auth";
 import { Chat } from "@/components/chat";
 import { DataStreamHandler } from "@/components/data-stream-handler";
@@ -22,15 +23,17 @@ export default async function Page() {
   if (!modelIdFromCookie) {
     return (
       <>
-        <Chat
-          autoResume={false}
-          id={id}
-          initialChatModel={DEFAULT_CHAT_MODEL}
-          initialMessages={[]}
-          initialVisibilityType="private"
-          isReadonly={false}
-          key={id}
-        />
+        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+          <Chat
+            autoResume={false}
+            id={id}
+            initialChatModel={DEFAULT_CHAT_MODEL}
+            initialMessages={[]}
+            initialVisibilityType="private"
+            isReadonly={false}
+            key={id}
+          />
+        </Suspense>
         <DataStreamHandler />
       </>
     );
@@ -38,15 +41,17 @@ export default async function Page() {
 
   return (
     <>
-      <Chat
-        autoResume={false}
-        id={id}
-        initialChatModel={modelIdFromCookie.value}
-        initialMessages={[]}
-        initialVisibilityType="private"
-        isReadonly={false}
-        key={id}
-      />
+      <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+        <Chat
+          autoResume={false}
+          id={id}
+          initialChatModel={modelIdFromCookie.value}
+          initialMessages={[]}
+          initialVisibilityType="private"
+          isReadonly={false}
+          key={id}
+        />
+      </Suspense>
       <DataStreamHandler />
     </>
   );
