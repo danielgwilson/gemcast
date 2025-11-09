@@ -38,6 +38,6 @@ export const myProvider = isTestEnvironment
         "artifact-model": google("models/gemini-2.5-pro"),
       },
       imageModels: {
-        "image-model": google.image("imagen-3.0-generate-002"),
+        "image-model": google.image("imagen-4.0-generate-001"),
       },
     });
