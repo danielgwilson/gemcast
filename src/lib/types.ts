@@ -2,7 +2,11 @@ import type { InferUITool, UIMessage } from 'ai';
 import { z } from 'zod';
 import type { ArtifactKind } from '@/components/artifact';
 import type { createDocument } from './ai/tools/create-document';
+import type { firecrawlScrape } from './ai/tools/firecrawl-scrape';
+import type { firecrawlCrawl } from './ai/tools/firecrawl-crawl';
+import type { firecrawlMap } from './ai/tools/firecrawl-map';
 import type { firecrawlSearch } from './ai/tools/firecrawl-search';
+import type { firecrawlExtract } from './ai/tools/firecrawl-extract';
 import type { gmail } from './ai/tools/gmail';
 import type { getWeather } from './ai/tools/get-weather';
 import type { googleCalendar } from './ai/tools/google-calendar';
@@ -35,7 +39,11 @@ type googleCalendarTool = InferUITool<ReturnType<typeof googleCalendar>>;
 type googleDriveWriteTool = InferUITool<ReturnType<typeof googleDriveWrite>>;
 type googleMeetCreateTool = InferUITool<ReturnType<typeof googleMeetCreate>>;
 type gmailTool = InferUITool<ReturnType<typeof gmail>>;
+type firecrawlScrapeTool = InferUITool<ReturnType<typeof firecrawlScrape>>;
+type firecrawlCrawlTool = InferUITool<ReturnType<typeof firecrawlCrawl>>;
+type firecrawlMapTool = InferUITool<ReturnType<typeof firecrawlMap>>;
 type firecrawlSearchTool = InferUITool<ReturnType<typeof firecrawlSearch>>;
+type firecrawlExtractTool = InferUITool<ReturnType<typeof firecrawlExtract>>;
 
 export type ChatTools = {
   getWeather: weatherTool;
@@ -47,7 +55,11 @@ export type ChatTools = {
   googleDriveWrite: googleDriveWriteTool;
   googleMeetCreate: googleMeetCreateTool;
   gmail: gmailTool;
+  firecrawlScrape: firecrawlScrapeTool;
+  firecrawlCrawl: firecrawlCrawlTool;
+  firecrawlMap: firecrawlMapTool;
   firecrawlSearch: firecrawlSearchTool;
+  firecrawlExtract: firecrawlExtractTool;
 };
 
 export type CustomUIDataTypes = {

@@ -23,7 +23,11 @@ import type { ChatModel } from '@/lib/ai/models';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
 import { myProvider } from '@/lib/ai/providers';
 import { createDocument } from '@/lib/ai/tools/create-document';
+import { firecrawlScrape } from '@/lib/ai/tools/firecrawl-scrape';
+import { firecrawlCrawl } from '@/lib/ai/tools/firecrawl-crawl';
+import { firecrawlMap } from '@/lib/ai/tools/firecrawl-map';
 import { firecrawlSearch } from '@/lib/ai/tools/firecrawl-search';
+import { firecrawlExtract } from '@/lib/ai/tools/firecrawl-extract';
 import { gmail } from '@/lib/ai/tools/gmail';
 import { getWeather } from '@/lib/ai/tools/get-weather';
 import { googleCalendar } from '@/lib/ai/tools/google-calendar';
@@ -216,7 +220,11 @@ export async function POST(request: Request) {
                   'googleDriveWrite',
                   'googleMeetCreate',
                   'gmail',
+                  'firecrawlScrape',
+                  'firecrawlCrawl',
+                  'firecrawlMap',
                   'firecrawlSearch',
+                  'firecrawlExtract',
                 ],
           experimental_transform: smoothStream({ chunking: 'word' }),
           tools: {
@@ -232,7 +240,11 @@ export async function POST(request: Request) {
             googleDriveWrite: googleDriveWrite({ session }),
             googleMeetCreate: googleMeetCreate({ session }),
             gmail: gmail({ session }),
-            firecrawlSearch: firecrawlSearch({}),
+            firecrawlScrape: firecrawlScrape(),
+            firecrawlCrawl: firecrawlCrawl(),
+            firecrawlMap: firecrawlMap(),
+            firecrawlSearch: firecrawlSearch(),
+            firecrawlExtract: firecrawlExtract(),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,

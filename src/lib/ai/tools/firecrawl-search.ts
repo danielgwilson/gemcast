@@ -2,48 +2,37 @@ import Firecrawl from '@mendable/firecrawl-js';
 import { tool } from 'ai';
 import { z } from 'zod';
 
-type FirecrawlSearchProps = {
-  // No session needed - uses API key from env
-};
-
-export const firecrawlSearch = ({}: FirecrawlSearchProps) =>
+export const firecrawlSearch = () =>
   tool({
     description:
-      'Scrape and research web content using Firecrawl to find experts, research topics, and validate podcast ideas. Use this for guest prospecting (scrape LinkedIn profiles, websites), competitor research, and content topic validation. Can scrape specific URLs or map websites to discover content.',
+      'Search the web and optionally scrape search results. Use this to find relevant web pages, articles, or content based on a search query. Can search across web, news, and images sources.',
     inputSchema: z.object({
-      action: z
-        .enum(['scrape', 'map', 'crawl'])
-        .describe(
-          'Action to perform: "scrape" to scrape a single URL, "map" to discover URLs on a website, "crawl" to crawl a website and extract content'
-        ),
-      url: z
-        .string()
-        .url()
+      query: z.string().describe('The search query'),
+      sources: z
+        .array(z.enum(['web', 'news', 'images']))
         .optional()
-        .describe('URL to scrape or map (required for scrape and map actions)'),
-      query: z
-        .string()
-        .optional()
-        .describe('Search query or topic (useful for context when scraping)'),
+        .default(['web'])
+        .describe('Sources to search (web, news, images)'),
       limit: z
         .number()
         .optional()
         .default(10)
-        .describe(
-          'Maximum number of pages/URLs to process (default: 10, max: 100)'
-        ),
-      formats: z
-        .array(z.enum(['markdown', 'html', 'rawHtml']))
+        .describe('Maximum number of results to return (default: 10)'),
+      scrapeOptions: z
+        .object({
+          formats: z
+            .array(z.enum(['markdown', 'html', 'rawHtml']))
+            .optional()
+            .default(['markdown']),
+        })
         .optional()
-        .default(['markdown'])
-        .describe('Output formats for scraped content'),
+        .describe('Options for scraping search results'),
     }),
     execute: async ({
-      action,
-      url,
       query,
+      sources = ['web'],
       limit = 10,
-      formats = ['markdown'],
+      scrapeOptions,
     }) => {
       try {
         if (!process.env.FIRECRAWL_API_KEY) {
@@ -57,98 +46,84 @@ export const firecrawlSearch = ({}: FirecrawlSearchProps) =>
           apiKey: process.env.FIRECRAWL_API_KEY,
         });
 
-        if (action === 'scrape') {
-          if (!url) {
-            return {
-              error: 'URL is required for scrape action',
-            };
-          }
+        // Search returns SearchData with web/news/images arrays
+        const result = await firecrawl.search(query, {
+          sources: sources.map((s) => ({ type: s })),
+          limit,
+          scrapeOptions: scrapeOptions
+            ? {
+                formats: scrapeOptions.formats as (
+                  | 'markdown'
+                  | 'html'
+                  | 'rawHtml'
+                )[],
+              }
+            : undefined,
+        });
 
-          const result = await firecrawl.scrape(url, {
-            formats: formats as ('markdown' | 'html' | 'rawHtml')[],
-          });
-
-          return {
-            success: true,
-            action: 'scrape',
-            url,
-            data: {
-              title: result.data?.title || result.metadata?.title,
-              description:
-                result.data?.description || result.metadata?.description,
-              markdown: result.data?.markdown,
-              html: result.data?.html,
-              links: result.data?.links || [],
-              metadata: result.metadata,
-            },
-          };
-        }
-
-        if (action === 'map') {
-          if (!url) {
-            return {
-              error: 'URL is required for map action',
-            };
-          }
-
-          const result = await firecrawl.map(url, {
-            limit: Math.min(limit, 100),
-          });
-
-          return {
-            success: true,
-            action: 'map',
-            url,
-            links: result.links || [],
-            count: result.links?.length || 0,
-          };
-        }
-
-        if (action === 'crawl') {
-          if (!url) {
-            return {
-              error: 'URL is required for crawl action',
-            };
-          }
-
-          const result = await firecrawl.crawl(url, {
-            limit: Math.min(limit, 100),
-            scrapeOptions: {
-              formats: formats as ('markdown' | 'html' | 'rawHtml')[],
-            },
-          });
-
-          return {
-            success: true,
-            action: 'crawl',
-            url,
-            data:
-              result.data?.map((page: any) => ({
-                url: page.sourceURL || page.url,
-                title: page.metadata?.title || page.data?.title,
-                description:
-                  page.metadata?.description || page.data?.description,
-                markdown: page.data?.markdown,
-                html: page.data?.html,
-              })) || [],
-            count: result.data?.length || 0,
-          };
-        }
+        // SearchData interface: { web?: Array<SearchResultWeb | Document>, news?: ..., images?: ... }
+        const searchResult = result as {
+          web?: Array<
+            | {
+                url: string;
+                title?: string;
+                description?: string;
+                category?: string;
+              }
+            | {
+                markdown?: string;
+                html?: string;
+                rawHtml?: string;
+                metadata?: {
+                  title?: string;
+                  description?: string;
+                  sourceURL?: string;
+                  [key: string]: unknown;
+                };
+                links?: string[];
+                [key: string]: unknown;
+              }
+          >;
+          news?: Array<{
+            title?: string;
+            url?: string;
+            snippet?: string;
+            date?: string;
+            imageUrl?: string;
+            position?: number;
+            category?: string;
+          }>;
+          images?: Array<{
+            title?: string;
+            imageUrl?: string;
+            imageWidth?: number;
+            imageHeight?: number;
+            url?: string;
+            position?: number;
+          }>;
+        };
 
         return {
-          error: `Unknown action: ${action}`,
+          success: true,
+          query,
+          web: searchResult.web || [],
+          news: searchResult.news || [],
+          images: searchResult.images || [],
+          webCount: searchResult.web?.length || 0,
+          newsCount: searchResult.news?.length || 0,
+          imagesCount: searchResult.images?.length || 0,
         };
       } catch (error) {
         console.error('Error in firecrawlSearch tool:', error);
 
         if (error instanceof Error) {
           return {
-            error: `Failed to use Firecrawl: ${error.message}`,
+            error: `Failed to search: ${error.message}`,
           };
         }
 
         return {
-          error: 'An unexpected error occurred while using Firecrawl.',
+          error: 'An unexpected error occurred while searching.',
         };
       }
     },
