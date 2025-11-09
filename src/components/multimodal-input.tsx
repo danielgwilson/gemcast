@@ -197,7 +197,10 @@ function PureMultimodalInput({
   }, []);
 
   const _modelResolver = useMemo(() => {
-    return myProvider.languageModel(selectedModelId);
+    // Map agent ID to underlying model ID
+    const agent = getAgentById(selectedModelId);
+    const actualModelId = agent ? agent.modelId : selectedModelId;
+    return myProvider.languageModel(actualModelId);
   }, [selectedModelId]);
 
   const contextProps = useMemo(
