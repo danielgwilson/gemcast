@@ -298,6 +298,7 @@ function PureMultimodalInput({
           <SuggestedActions
             chatId={chatId}
             selectedVisibilityType={selectedVisibilityType}
+            selectedModelId={selectedModelId}
             sendMessage={sendMessage}
           />
         )}
