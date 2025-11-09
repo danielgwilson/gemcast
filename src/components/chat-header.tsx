@@ -28,7 +28,7 @@ function PureChatHeader({
 
   return (
     <header 
-      className="sticky top-0 z-10 flex items-center gap-2 backdrop-blur-xl bg-background/60 border-b border-border/50 px-2 py-1.5 md:px-2 shadow-sm"
+      className="sticky top-0 z-10 flex items-center gap-2 backdrop-blur-xl bg-background/60 dark:bg-background/80 border-b border-border/50 px-2 py-1.5 md:px-2 shadow-sm"
       style={agent ? {
         background: `linear-gradient(135deg, ${agent.color}08 0%, transparent 100%), rgba(var(--background), 0.6)`,
         borderBottomColor: `${agent.color}20`,
@@ -61,7 +61,7 @@ function PureChatHeader({
 
       {(!open || windowWidth < 768) && (
         <Button
-          className="order-2 ml-auto h-8 px-2 backdrop-blur-sm bg-background/60 border border-border/50 hover:bg-background/80 md:order-1 md:ml-0 md:h-fit md:px-2 transition-all"
+          className="order-2 ml-auto h-8 px-2 backdrop-blur-sm bg-background/60 dark:bg-background/80 border border-border/50 hover:bg-background/80 dark:hover:bg-background/90 md:order-1 md:ml-0 md:h-fit md:px-2 transition-all"
           onClick={() => {
             router.push("/");
             router.refresh();

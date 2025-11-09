@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   title: "GEMCAST - AI Podcast Automation",
   description: "Your podcast team, powered by AI",
   generator: "v0.app",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
   icons: {
     icon: [
       {

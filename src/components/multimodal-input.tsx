@@ -291,7 +291,7 @@ function PureMultimodalInput({
   }, [handlePaste]);
 
   return (
-    <div className={cn("relative flex w-full flex-col gap-4", className)}>
+    <div className={cn("relative flex w-full flex-col gap-4 min-w-0", className)}>
       {messages.length === 0 &&
         attachments.length === 0 &&
         uploadQueue.length === 0 && (
@@ -313,7 +313,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="rounded-xl border border-border/50 bg-background/60 backdrop-blur-xl p-3 shadow-lg transition-all duration-200 focus-within:border-border/80 hover:border-muted-foreground/50"
+        className="rounded-xl border border-border/50 bg-background/60 dark:bg-background/80 backdrop-blur-xl p-3 shadow-lg transition-all duration-200 focus-within:border-border/80 hover:border-muted-foreground/50 min-w-0"
         style={(() => {
           const agent = getAgentById(selectedModelId);
           return agent ? {
@@ -367,7 +367,7 @@ function PureMultimodalInput({
         <div className="flex flex-row items-start gap-1 sm:gap-2">
           <PromptInputTextarea
             autoFocus
-            className="grow resize-none border-0! border-none! bg-transparent p-2 text-sm outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
+            className="grow resize-none border-0! border-none! bg-transparent p-2 text-base md:text-sm outline-none ring-0 [-ms-overflow-style:none] [scrollbar-width:none] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-scrollbar]:hidden"
             data-testid="multimodal-input"
             disableAutoResize={true}
             maxHeight={200}
@@ -508,7 +508,7 @@ function PureModelSelectorCompact({
       <Trigger asChild>
         <Button 
           variant="ghost" 
-          className="h-8 px-2 backdrop-blur-sm bg-background/60 border border-border/50 hover:bg-background/80 transition-all"
+          className="h-8 px-2 backdrop-blur-sm bg-background/60 dark:bg-background/80 border border-border/50 hover:bg-background/80 dark:hover:bg-background/90 transition-all text-foreground"
           style={selectedAgent ? {
             background: `linear-gradient(135deg, ${selectedAgent.color}15 0%, ${selectedAgent.color}05 100%)`,
             borderColor: `${selectedAgent.color}30`,
@@ -525,7 +525,7 @@ function PureModelSelectorCompact({
           <ChevronDownIcon size={16} />
         </Button>
       </Trigger>
-      <PromptInputModelSelectContent className="min-w-[320px] p-2 backdrop-blur-xl bg-background/80 border border-border/50 shadow-xl">
+      <PromptInputModelSelectContent className="min-w-[320px] p-2 backdrop-blur-xl bg-background/95 dark:bg-background/95 border border-border/50 shadow-xl">
         <div className="flex flex-col gap-1.5">
           <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Agents
@@ -534,7 +534,7 @@ function PureModelSelectorCompact({
             <SelectItem 
               key={agent.id} 
               value={agent.name}
-              className="rounded-lg p-3 cursor-pointer hover:bg-accent/50 transition-all pl-8"
+              className="rounded-lg p-3 cursor-pointer hover:bg-accent/50 dark:hover:bg-accent/30 transition-all pl-8 text-foreground focus:bg-accent/50 dark:focus:bg-accent/30"
               style={{
                 background: optimisticModelId === agent.id 
                   ? `linear-gradient(135deg, ${agent.color}15 0%, ${agent.color}05 100%)`
@@ -553,7 +553,7 @@ function PureModelSelectorCompact({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <div className="truncate font-semibold text-sm">{agent.name}</div>
+                    <div className="truncate font-semibold text-sm text-foreground">{agent.name}</div>
                     <div 
                       className="w-2 h-2 rounded-full"
                       style={{ background: agent.color }}
@@ -568,7 +568,7 @@ function PureModelSelectorCompact({
                         key={capability}
                         className="text-[10px] px-1.5 py-0.5 rounded-md backdrop-blur-sm"
                         style={{
-                          background: `${agent.color}15`,
+                          background: `oklch(from ${agent.color} l c h / 0.15)`,
                           color: agent.color,
                         }}
                       >
@@ -584,7 +584,7 @@ function PureModelSelectorCompact({
             Models
           </div>
           {chatModels.map((model) => (
-            <SelectItem key={model.id} value={model.name} className="rounded-lg p-2 pl-8">
+            <SelectItem key={model.id} value={model.name} className="rounded-lg p-2 pl-8 text-foreground hover:bg-accent/50 dark:hover:bg-accent/30 focus:bg-accent/50 dark:focus:bg-accent/30">
               <div className="truncate font-medium text-xs">{model.name}</div>
               <div className="mt-px truncate text-[10px] text-muted-foreground leading-tight">
                 {model.description}
