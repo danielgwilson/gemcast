@@ -39,6 +39,7 @@ export const getWeather = tool({
       .optional(),
   }),
   execute: async (input) => {
+    try {
     let latitude: number;
     let longitude: number;
 
@@ -65,12 +66,53 @@ export const getWeather = tool({
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`,
     );
 
+    if (!response.ok) {
+      return {
+        error: `WEATHER API ERROR: Failed to fetch weather data. Status: ${response.status} ${response.statusText}`,
+      };
+    }
+
     const weatherData = await response.json();
+
+    // Validate we got weather data
+    if (!weatherData || (!weatherData.current && !weatherData.hourly && !weatherData.daily)) {
+      return {
+        error:
+          'WEATHER DATA INVALID: Received invalid weather data from API. The weather service may be unavailable.',
+      };
+    }
 
     if ("city" in input) {
       weatherData.cityName = input.city;
     }
 
-    return weatherData;
+      return weatherData;
+    } catch (error) {
+      console.error('Error in getWeather tool:', error);
+
+      if (error instanceof Error) {
+        const errorMessage = error.message || '';
+
+        if (
+          errorMessage.includes('fetch') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('ECONNREFUSED')
+        ) {
+          return {
+            error:
+              'NETWORK ERROR: Failed to connect to weather service. Please check your internet connection and try again.',
+          };
+        }
+
+        return {
+          error: `WEATHER OPERATION FAILED: ${errorMessage}. The weather lookup did not succeed.`,
+        };
+      }
+
+      return {
+        error:
+          'WEATHER OPERATION FAILED: An unexpected error occurred. The weather lookup did not succeed.',
+      };
+    }
   },
 });

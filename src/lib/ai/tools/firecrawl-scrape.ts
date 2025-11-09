@@ -27,10 +27,27 @@ export const firecrawlScrape = () =>
           apiKey: process.env.FIRECRAWL_API_KEY,
         });
 
+        // Validate URL format
+        try {
+          new URL(url);
+        } catch {
+          return {
+            error: `INVALID URL: "${url}" is not a valid URL format.`,
+          };
+        }
+
         // Scrape returns Document directly (per Firecrawl SDK types)
         const result = await firecrawl.scrape(url, {
           formats: formats as ('markdown' | 'html' | 'rawHtml')[],
         });
+
+        // Validate result exists
+        if (!result) {
+          return {
+            error:
+              'SCRAPE FAILED: No content returned from scrape API. The page may be inaccessible or the scrape may have failed.',
+          };
+        }
 
         // Document interface: markdown, html, rawHtml, metadata, links, etc.
         const doc = result as {
@@ -46,6 +63,22 @@ export const firecrawlScrape = () =>
           links?: string[];
           [key: string]: unknown;
         };
+
+        // Validate we got at least some content
+        const hasContent =
+          doc.markdown ||
+          doc.html ||
+          doc.rawHtml ||
+          doc.metadata?.title ||
+          doc.metadata?.description;
+
+        if (!hasContent) {
+          return {
+            error:
+              'SCRAPE FAILED: Page scraped but no content was extracted. The page may be empty or inaccessible.',
+            url: doc.metadata?.sourceURL || url,
+          };
+        }
 
         return {
           success: true,
@@ -64,13 +97,59 @@ export const firecrawlScrape = () =>
         console.error('Error in firecrawlScrape tool:', error);
 
         if (error instanceof Error) {
+          const errorMessage = error.message || '';
+
+          if (
+            errorMessage.includes('API key') ||
+            errorMessage.includes('Unauthorized') ||
+            errorMessage.includes('401')
+          ) {
+            return {
+              error:
+                'AUTHENTICATION FAILED: Invalid Firecrawl API key. Please contact support.',
+            };
+          }
+
+          if (
+            errorMessage.includes('Rate limit') ||
+            errorMessage.includes('429') ||
+            errorMessage.includes('quota')
+          ) {
+            return {
+              error:
+                'RATE LIMIT EXCEEDED: Too many scrape requests. Please try again later.',
+            };
+          }
+
+          if (
+            errorMessage.includes('404') ||
+            errorMessage.includes('Not Found') ||
+            errorMessage.includes('not found')
+          ) {
+            return {
+              error: `PAGE NOT FOUND: The URL "${url}" could not be found or is not accessible.`,
+            };
+          }
+
+          if (
+            errorMessage.includes('timeout') ||
+            errorMessage.includes('Timeout') ||
+            errorMessage.includes('timed out')
+          ) {
+            return {
+              error:
+                'SCRAPE TIMEOUT: The page took too long to load. Please try again later.',
+            };
+          }
+
           return {
-            error: `Failed to scrape URL: ${error.message}`,
+            error: `SCRAPE OPERATION FAILED: ${errorMessage}. The scrape did not succeed.`,
           };
         }
 
         return {
-          error: 'An unexpected error occurred while scraping the URL.',
+          error:
+            'SCRAPE OPERATION FAILED: An unexpected error occurred. The scrape did not succeed.',
         };
       }
     },

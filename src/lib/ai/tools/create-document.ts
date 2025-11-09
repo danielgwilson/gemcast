@@ -54,23 +54,32 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
       );
 
       if (!documentHandler) {
-        throw new Error(`No document handler found for kind: ${kind}`);
+        return {
+          error: `DOCUMENT CREATION FAILED: No document handler found for kind: ${kind}. The document was NOT created.`,
+        };
       }
 
-      await documentHandler.onCreateDocument({
-        id,
-        title,
-        dataStream,
-        session,
-      });
+      try {
+        await documentHandler.onCreateDocument({
+          id,
+          title,
+          dataStream,
+          session,
+        });
 
-      dataStream.write({ type: "data-finish", data: null, transient: true });
+        dataStream.write({ type: "data-finish", data: null, transient: true });
 
-      return {
-        id,
-        title,
-        kind,
-        content: "A document was created and is now visible to the user.",
-      };
+        return {
+          id,
+          title,
+          kind,
+          content: "A document was created and is now visible to the user.",
+        };
+      } catch (handlerError) {
+        console.error('Error in document handler:', handlerError);
+        return {
+          error: `DOCUMENT CREATION FAILED: ${handlerError instanceof Error ? handlerError.message : 'Unknown error'}. The document was NOT created.`,
+        };
+      }
     },
   });

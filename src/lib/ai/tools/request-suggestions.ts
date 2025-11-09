@@ -70,24 +70,43 @@ export const requestSuggestions = ({
         suggestions.push(suggestion);
       }
 
+      // Validate we got suggestions
+      if (suggestions.length === 0) {
+        return {
+          error:
+            'SUGGESTIONS FAILED: No suggestions were generated. The document may be too short or the AI model may have failed.',
+          documentId,
+        };
+      }
+
       if (session.user?.id) {
         const userId = session.user.id;
 
-        await saveSuggestions({
-          suggestions: suggestions.map((suggestion) => ({
-            ...suggestion,
-            userId,
-            createdAt: new Date(),
-            documentCreatedAt: document.createdAt,
-          })),
-        });
+        try {
+          await saveSuggestions({
+            suggestions: suggestions.map((suggestion) => ({
+              ...suggestion,
+              userId,
+              createdAt: new Date(),
+              documentCreatedAt: document.createdAt,
+            })),
+          });
+        } catch (saveError) {
+          console.error('Error saving suggestions:', saveError);
+          return {
+            error: `SUGGESTIONS SAVE FAILED: ${saveError instanceof Error ? saveError.message : 'Unknown error'}. Suggestions were generated but could not be saved.`,
+            documentId,
+            suggestionsCount: suggestions.length,
+          };
+        }
       }
 
       return {
         id: documentId,
         title: document.title,
         kind: document.kind,
-        message: "Suggestions have been added to the document",
+        message: `Suggestions have been added to the document (${suggestions.length} suggestions)`,
+        suggestionsCount: suggestions.length,
       };
     },
   });

@@ -36,7 +36,20 @@ export const gmail = ({ session }: GmailProps) =>
           };
         }
 
-        const gmailClient = getGmailClient(session);
+        // Get Gmail client - this will throw if credentials are missing
+        let gmailClient: ReturnType<typeof getGmailClient>;
+        try {
+          gmailClient = getGmailClient(session);
+        } catch (clientError) {
+          if (clientError instanceof Error) {
+            return {
+              error: `Failed to initialize Gmail client: ${clientError.message}`,
+            };
+          }
+          return {
+            error: 'Failed to initialize Gmail client: Unknown error',
+          };
+        }
 
         // Format body as HTML if it contains HTML tags, otherwise wrap in <p> tags
         const htmlBody = body.includes('<') && body.includes('>')
@@ -49,6 +62,20 @@ export const gmail = ({ session }: GmailProps) =>
           body: htmlBody,
           fromName,
         });
+
+        // Validate critical fields
+        if (!draft || !draft.id) {
+          return {
+            error:
+              'CRITICAL: Draft email creation failed - no draft ID returned. The draft was NOT created.',
+          };
+        }
+
+        if (!draft.draftLink) {
+          return {
+            error: `CRITICAL: Draft email creation incomplete - draft ID ${draft.id} exists but has no draft link. The draft may not be accessible.`,
+          };
+        }
 
         return {
           success: true,
@@ -64,27 +91,51 @@ export const gmail = ({ session }: GmailProps) =>
         console.error('Error in gmail tool:', error);
 
         if (error instanceof Error) {
-          if (error.message.includes('Invalid Credentials') || error.message.includes('401')) {
+          const errorMessage = error.message || '';
+
+          if (
+            errorMessage.includes('Invalid Credentials') ||
+            errorMessage.includes('401') ||
+            errorMessage.includes('expired access token') ||
+            errorMessage.includes('No access token')
+          ) {
             return {
               error:
-                'Authentication failed. Please sign out and sign back in to refresh your Google authentication.',
+                'AUTHENTICATION FAILED: Invalid or expired Google access token. Please sign out and sign back in to refresh your Google authentication.',
             };
           }
 
-          if (error.message.includes('403')) {
+          if (
+            errorMessage.includes('403') ||
+            errorMessage.includes('Permission denied') ||
+            errorMessage.includes('Permission')
+          ) {
             return {
               error:
-                'Permission denied. Make sure you have granted the necessary Gmail permissions.',
+                'PERMISSION DENIED: Gmail access was denied. Make sure you have granted the necessary Gmail permissions.',
+            };
+          }
+
+          if (
+            errorMessage.includes('GOOGLE_CLIENT_ID') ||
+            errorMessage.includes('GOOGLE_CLIENT_SECRET') ||
+            (errorMessage.includes('Missing') &&
+              errorMessage.includes('environment'))
+          ) {
+            return {
+              error:
+                'SERVER CONFIGURATION ERROR: Missing Google OAuth credentials on the server. Please contact support.',
             };
           }
 
           return {
-            error: `Failed to create draft email: ${error.message}`,
+            error: `GMAIL OPERATION FAILED: ${errorMessage}. The operation did not succeed.`,
           };
         }
 
         return {
-          error: 'An unexpected error occurred while creating the draft email.',
+          error:
+            'GMAIL OPERATION FAILED: An unexpected error occurred. The operation did not succeed.',
         };
       }
     },

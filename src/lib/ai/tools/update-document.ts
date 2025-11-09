@@ -40,23 +40,32 @@ export const updateDocument = ({ session, dataStream }: UpdateDocumentProps) =>
       );
 
       if (!documentHandler) {
-        throw new Error(`No document handler found for kind: ${document.kind}`);
+        return {
+          error: `DOCUMENT UPDATE FAILED: No document handler found for kind: ${document.kind}. The document was NOT updated.`,
+        };
       }
 
-      await documentHandler.onUpdateDocument({
-        document,
-        description,
-        dataStream,
-        session,
-      });
+      try {
+        await documentHandler.onUpdateDocument({
+          document,
+          description,
+          dataStream,
+          session,
+        });
 
-      dataStream.write({ type: "data-finish", data: null, transient: true });
+        dataStream.write({ type: "data-finish", data: null, transient: true });
 
-      return {
-        id,
-        title: document.title,
-        kind: document.kind,
-        content: "The document has been updated successfully.",
-      };
+        return {
+          id,
+          title: document.title,
+          kind: document.kind,
+          content: "The document has been updated successfully.",
+        };
+      } catch (handlerError) {
+        console.error('Error in document handler:', handlerError);
+        return {
+          error: `DOCUMENT UPDATE FAILED: ${handlerError instanceof Error ? handlerError.message : 'Unknown error'}. The document was NOT updated.`,
+        };
+      }
     },
   });

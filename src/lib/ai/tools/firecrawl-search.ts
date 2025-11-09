@@ -46,6 +46,13 @@ export const firecrawlSearch = () =>
           apiKey: process.env.FIRECRAWL_API_KEY,
         });
 
+        // Validate query is not empty
+        if (!query || query.trim().length === 0) {
+          return {
+            error: 'SEARCH FAILED: Query cannot be empty.',
+          };
+        }
+
         // Search returns SearchData with web/news/images arrays
         const result = await firecrawl.search(query, {
           sources: sources.map((s) => ({ type: s })),
@@ -60,6 +67,14 @@ export const firecrawlSearch = () =>
               }
             : undefined,
         });
+
+        // Validate result exists
+        if (!result) {
+          return {
+            error:
+              'SEARCH FAILED: No results returned from search API. The search may have failed.',
+          };
+        }
 
         // SearchData interface: { web?: Array<SearchResultWeb | Document>, news?: ..., images?: ... }
         const searchResult = result as {
@@ -103,27 +118,83 @@ export const firecrawlSearch = () =>
           }>;
         };
 
+        // Validate we got at least some results
+        const webCount = searchResult.web?.length || 0;
+        const newsCount = searchResult.news?.length || 0;
+        const imagesCount = searchResult.images?.length || 0;
+        const totalCount = webCount + newsCount + imagesCount;
+
+        if (totalCount === 0) {
+          return {
+            success: true,
+            query,
+            web: [],
+            news: [],
+            images: [],
+            webCount: 0,
+            newsCount: 0,
+            imagesCount: 0,
+            message:
+              'Search completed but no results found. Try refining your search query.',
+          };
+        }
+
         return {
           success: true,
           query,
           web: searchResult.web || [],
           news: searchResult.news || [],
           images: searchResult.images || [],
-          webCount: searchResult.web?.length || 0,
-          newsCount: searchResult.news?.length || 0,
-          imagesCount: searchResult.images?.length || 0,
+          webCount,
+          newsCount,
+          imagesCount,
         };
       } catch (error) {
         console.error('Error in firecrawlSearch tool:', error);
 
         if (error instanceof Error) {
+          const errorMessage = error.message || '';
+
+          if (
+            errorMessage.includes('API key') ||
+            errorMessage.includes('Unauthorized') ||
+            errorMessage.includes('401')
+          ) {
+            return {
+              error:
+                'AUTHENTICATION FAILED: Invalid Firecrawl API key. Please contact support.',
+            };
+          }
+
+          if (
+            errorMessage.includes('Rate limit') ||
+            errorMessage.includes('429') ||
+            errorMessage.includes('quota')
+          ) {
+            return {
+              error:
+                'RATE LIMIT EXCEEDED: Too many search requests. Please try again later.',
+            };
+          }
+
+          if (
+            errorMessage.includes('Invalid') ||
+            errorMessage.includes('400') ||
+            errorMessage.includes('Bad Request')
+          ) {
+            return {
+              error: `INVALID REQUEST: ${errorMessage}. Please check your search query and parameters.`,
+            };
+          }
+
           return {
-            error: `Failed to search: ${error.message}`,
+            error: `SEARCH OPERATION FAILED: ${errorMessage}. The search did not succeed.`,
           };
         }
 
         return {
-          error: 'An unexpected error occurred while searching.',
+          error:
+            'SEARCH OPERATION FAILED: An unexpected error occurred. The search did not succeed.',
         };
       }
     },

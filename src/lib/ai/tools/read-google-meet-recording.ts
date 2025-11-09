@@ -46,7 +46,20 @@ export const readGoogleMeetRecording = ({ session }: ReadGoogleMeetRecordingProp
           };
         }
 
-        const drive = getDriveClient(session);
+        // Get Drive client - this will throw if credentials are missing
+        let drive: ReturnType<typeof getDriveClient>;
+        try {
+          drive = getDriveClient(session);
+        } catch (clientError) {
+          if (clientError instanceof Error) {
+            return {
+              error: `Failed to initialize Drive client: ${clientError.message}`,
+            };
+          }
+          return {
+            error: 'Failed to initialize Drive client: Unknown error',
+          };
+        }
 
         if (action === 'list') {
           // Find the Meet Recordings folder
@@ -61,8 +74,16 @@ export const readGoogleMeetRecording = ({ session }: ReadGoogleMeetRecordingProp
             };
           }
 
+          // Validate folder has ID before using it
+          if (!folder.id) {
+            return {
+              error:
+                'CRITICAL: Folder found but has no ID. Cannot list recordings.',
+            };
+          }
+
           // List recent recordings
-          const recordings = await listMeetRecordings(drive, folder.id!, limit);
+          const recordings = await listMeetRecordings(drive, folder.id, limit);
 
           return {
             success: true,
@@ -76,7 +97,8 @@ export const readGoogleMeetRecording = ({ session }: ReadGoogleMeetRecordingProp
               createdTime: recording.createdTime,
               webViewLink: recording.webViewLink,
               isVideo: recording.mimeType?.includes('video'),
-              isTranscript: recording.mimeType === 'application/vnd.google-apps.document',
+              isTranscript:
+                recording.mimeType === 'application/vnd.google-apps.document',
             })),
             count: recordings.length,
           };
@@ -100,18 +122,43 @@ export const readGoogleMeetRecording = ({ session }: ReadGoogleMeetRecordingProp
             };
           }
 
+          // Validate folder has ID
+          if (!folder.id) {
+            return {
+              error:
+                'CRITICAL: Folder found but has no ID. Cannot retrieve transcript.',
+            };
+          }
+
           // Get the transcript
           const transcriptData = await getTranscriptForRecording(
             drive,
             recordingId,
-            folder.id!,
+            folder.id,
           );
 
           if (!transcriptData) {
             return {
               error:
-                'Could not find a transcript for this recording. ' +
+                'TRANSCRIPT NOT FOUND: Could not find a transcript for this recording. ' +
                 'Make sure transcription was enabled during the Google Meet recording.',
+              recordingId,
+            };
+          }
+
+          if (!transcriptData.transcript || transcriptData.transcript.length === 0) {
+            return {
+              error:
+                'TRANSCRIPT EMPTY: Transcript found but contains no content.',
+              recordingId,
+              transcriptId: transcriptData.transcriptId,
+            };
+          }
+
+          if (!transcriptData.transcriptId) {
+            return {
+              error:
+                'CRITICAL: Transcript data incomplete - missing transcript ID.',
               recordingId,
             };
           }
@@ -136,6 +183,14 @@ export const readGoogleMeetRecording = ({ session }: ReadGoogleMeetRecordingProp
 
           const details = await getRecordingDetails(drive, recordingId);
 
+          if (!details || !details.id) {
+            return {
+              error:
+                'CRITICAL: Failed to retrieve recording details - no recording ID returned. The recording may not exist or may not be accessible.',
+              recordingId,
+            };
+          }
+
           return {
             success: true,
             action: 'get_details',
@@ -158,28 +213,62 @@ export const readGoogleMeetRecording = ({ session }: ReadGoogleMeetRecordingProp
         console.error('Error in readGoogleMeetRecording tool:', error);
 
         if (error instanceof Error) {
-          // Handle specific Google API errors
-          if (error.message.includes('Invalid Credentials') || error.message.includes('401')) {
+          const errorMessage = error.message || '';
+
+          if (
+            errorMessage.includes('Invalid Credentials') ||
+            errorMessage.includes('401') ||
+            errorMessage.includes('expired access token') ||
+            errorMessage.includes('No access token')
+          ) {
             return {
               error:
-                'Authentication failed. Please sign out and sign back in to refresh your Google authentication.',
+                'AUTHENTICATION FAILED: Invalid or expired Google access token. Please sign out and sign back in to refresh your Google authentication.',
             };
           }
 
-          if (error.message.includes('403')) {
+          if (
+            errorMessage.includes('403') ||
+            errorMessage.includes('Permission denied') ||
+            errorMessage.includes('Permission')
+          ) {
             return {
               error:
-                'Permission denied. Make sure you have granted the necessary Google Drive permissions.',
+                'PERMISSION DENIED: Google Drive access was denied. Make sure you have granted the necessary Google Drive permissions.',
+            };
+          }
+
+          if (
+            errorMessage.includes('404') ||
+            errorMessage.includes('Not Found') ||
+            errorMessage.includes('not found')
+          ) {
+            return {
+              error:
+                'RECORDING NOT FOUND: The requested recording does not exist or is not accessible.',
+            };
+          }
+
+          if (
+            errorMessage.includes('GOOGLE_CLIENT_ID') ||
+            errorMessage.includes('GOOGLE_CLIENT_SECRET') ||
+            (errorMessage.includes('Missing') &&
+              errorMessage.includes('environment'))
+          ) {
+            return {
+              error:
+                'SERVER CONFIGURATION ERROR: Missing Google OAuth credentials on the server. Please contact support.',
             };
           }
 
           return {
-            error: `Failed to read Google Meet recording: ${error.message}`,
+            error: `RECORDING OPERATION FAILED: ${errorMessage}. The operation did not succeed.`,
           };
         }
 
         return {
-          error: 'An unexpected error occurred while reading the Google Meet recording.',
+          error:
+            'RECORDING OPERATION FAILED: An unexpected error occurred. The operation did not succeed.',
         };
       }
     },

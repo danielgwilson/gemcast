@@ -56,16 +56,42 @@ export const googleDriveWrite = ({ session }: GoogleDriveWriteProps) =>
           };
         }
 
-        const drive = getDriveClient(session);
+        // Get Drive client - this will throw if credentials are missing
+        let drive: ReturnType<typeof getDriveClient>;
+        try {
+          drive = getDriveClient(session);
+        } catch (clientError) {
+          if (clientError instanceof Error) {
+            return {
+              error: `Failed to initialize Drive client: ${clientError.message}`,
+            };
+          }
+          return {
+            error: 'Failed to initialize Drive client: Unknown error',
+          };
+        }
 
         if (action === 'setup_podcast_folders') {
           // Create main Podcast folder
           const podcastFolder = await findOrCreateFolder(drive, 'Podcast');
 
+          if (!podcastFolder || !podcastFolder.id) {
+            return {
+              error: 'CRITICAL: Failed to create Podcast folder. The operation did not succeed.',
+            };
+          }
+
           // Create subfolders
-          const brandingFolder = await findOrCreateFolder(drive, '01_Branding', podcastFolder.id!);
-          const episodesFolder = await findOrCreateFolder(drive, '02_Episodes', podcastFolder.id!);
-          const marketingFolder = await findOrCreateFolder(drive, '03_Marketing_Assets', podcastFolder.id!);
+          const brandingFolder = await findOrCreateFolder(drive, '01_Branding', podcastFolder.id);
+          const episodesFolder = await findOrCreateFolder(drive, '02_Episodes', podcastFolder.id);
+          const marketingFolder = await findOrCreateFolder(drive, '03_Marketing_Assets', podcastFolder.id);
+
+          // Validate all folders were created
+          if (!brandingFolder?.id || !episodesFolder?.id || !marketingFolder?.id) {
+            return {
+              error: 'CRITICAL: Failed to create one or more subfolders. Some folders may not have been created.',
+            };
+          }
 
           return {
             success: true,
@@ -100,6 +126,12 @@ export const googleDriveWrite = ({ session }: GoogleDriveWriteProps) =>
 
           const folder = await findOrCreateFolder(drive, folderName, parentFolderId);
 
+          if (!folder || !folder.id) {
+            return {
+              error: 'CRITICAL: Folder creation failed - no folder ID returned. The folder was NOT created.',
+            };
+          }
+
           return {
             success: true,
             action: 'create_folder',
@@ -122,6 +154,18 @@ export const googleDriveWrite = ({ session }: GoogleDriveWriteProps) =>
             content,
             parentFolderId,
           });
+
+          if (!doc || !doc.id) {
+            return {
+              error: 'CRITICAL: Document creation failed - no document ID returned. The document was NOT created.',
+            };
+          }
+
+          if (!doc.webViewLink) {
+            return {
+              error: `CRITICAL: Document creation incomplete - document ID ${doc.id} exists but has no web view link. The document may not be accessible.`,
+            };
+          }
 
           return {
             success: true,
@@ -148,6 +192,18 @@ export const googleDriveWrite = ({ session }: GoogleDriveWriteProps) =>
             mimeType,
           });
 
+          if (!file || !file.id) {
+            return {
+              error: 'CRITICAL: File creation failed - no file ID returned. The file was NOT created.',
+            };
+          }
+
+          if (!file.webViewLink) {
+            return {
+              error: `CRITICAL: File creation incomplete - file ID ${file.id} exists but has no web view link. The file may not be accessible.`,
+            };
+          }
+
           return {
             success: true,
             action: 'create_file',
@@ -166,27 +222,62 @@ export const googleDriveWrite = ({ session }: GoogleDriveWriteProps) =>
         console.error('Error in googleDriveWrite tool:', error);
 
         if (error instanceof Error) {
-          if (error.message.includes('Invalid Credentials') || error.message.includes('401')) {
+          const errorMessage = error.message || '';
+
+          if (
+            errorMessage.includes('Invalid Credentials') ||
+            errorMessage.includes('401') ||
+            errorMessage.includes('expired access token') ||
+            errorMessage.includes('No access token')
+          ) {
             return {
               error:
-                'Authentication failed. Please sign out and sign back in to refresh your Google authentication.',
+                'AUTHENTICATION FAILED: Invalid or expired Google access token. Please sign out and sign back in to refresh your Google authentication.',
             };
           }
 
-          if (error.message.includes('403')) {
+          if (
+            errorMessage.includes('403') ||
+            errorMessage.includes('Permission denied') ||
+            errorMessage.includes('Permission')
+          ) {
             return {
               error:
-                'Permission denied. Make sure you have granted the necessary Google Drive permissions.',
+                'PERMISSION DENIED: Google Drive access was denied. Make sure you have granted the necessary Google Drive permissions.',
+            };
+          }
+
+          if (
+            errorMessage.includes('404') ||
+            errorMessage.includes('Not Found') ||
+            errorMessage.includes('not found')
+          ) {
+            return {
+              error:
+                'RESOURCE NOT FOUND: The requested Drive resource does not exist or is not accessible.',
+            };
+          }
+
+          if (
+            errorMessage.includes('GOOGLE_CLIENT_ID') ||
+            errorMessage.includes('GOOGLE_CLIENT_SECRET') ||
+            (errorMessage.includes('Missing') &&
+              errorMessage.includes('environment'))
+          ) {
+            return {
+              error:
+                'SERVER CONFIGURATION ERROR: Missing Google OAuth credentials on the server. Please contact support.',
             };
           }
 
           return {
-            error: `Failed to write to Drive: ${error.message}`,
+            error: `DRIVE OPERATION FAILED: ${errorMessage}. The operation did not succeed.`,
           };
         }
 
         return {
-          error: 'An unexpected error occurred while writing to Google Drive.',
+          error:
+            'DRIVE OPERATION FAILED: An unexpected error occurred. The operation did not succeed.',
         };
       }
     },
