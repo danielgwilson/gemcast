@@ -144,3 +144,4 @@ export function AppSidebar({ user }: { user: User | undefined }) {
     </>
   );
 }
+
