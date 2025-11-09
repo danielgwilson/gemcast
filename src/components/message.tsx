@@ -4,6 +4,7 @@ import equal from "fast-deep-equal";
 import { motion } from "framer-motion";
 import { memo, useState } from "react";
 import type { Vote } from "@/lib/db/schema";
+import { getAgentById } from "@/lib/ai/agents";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
@@ -35,6 +36,7 @@ const PurePreviewMessage = ({
   regenerate,
   isReadonly,
   requiresScrollPadding,
+  selectedModelId,
 }: {
   chatId: string;
   message: ChatMessage;
@@ -44,8 +46,10 @@ const PurePreviewMessage = ({
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   isReadonly: boolean;
   requiresScrollPadding: boolean;
+  selectedModelId: string;
 }) => {
   const [mode, setMode] = useState<"view" | "edit">("view");
+  const agent = getAgentById(selectedModelId);
 
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file",
@@ -68,8 +72,21 @@ const PurePreviewMessage = ({
         })}
       >
         {message.role === "assistant" && (
-          <div className="-mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border">
-            <SparklesIcon size={14} />
+          <div 
+            className="-mt-1 flex size-8 shrink-0 items-center justify-center rounded-full backdrop-blur-sm border-2 transition-all"
+            style={agent ? {
+              background: agent.gradient,
+              borderColor: `${agent.color}40`,
+            } : {
+              background: 'var(--background)',
+              borderColor: 'var(--border)',
+            }}
+          >
+            {agent ? (
+              <span className="text-base">{agent.icon}</span>
+            ) : (
+              <SparklesIcon size={14} />
+            )}
           </div>
         )}
 
@@ -328,6 +345,9 @@ export const PreviewMessage = memo(
     if (prevProps.requiresScrollPadding !== nextProps.requiresScrollPadding) {
       return false;
     }
+    if (prevProps.selectedModelId !== nextProps.selectedModelId) {
+      return false;
+    }
     if (!equal(prevProps.message.parts, nextProps.message.parts)) {
       return false;
     }
@@ -339,8 +359,9 @@ export const PreviewMessage = memo(
   },
 );
 
-export const ThinkingMessage = () => {
+export const ThinkingMessage = ({ selectedModelId }: { selectedModelId?: string }) => {
   const role = "assistant";
+  const agent = selectedModelId ? getAgentById(selectedModelId) : undefined;
 
   return (
     <motion.div
@@ -353,8 +374,21 @@ export const ThinkingMessage = () => {
       transition={{ duration: 0.2 }}
     >
       <div className="flex items-start justify-start gap-3">
-        <div className="-mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border">
-          <SparklesIcon size={14} />
+        <div 
+          className="-mt-1 flex size-8 shrink-0 items-center justify-center rounded-full backdrop-blur-sm border-2 transition-all"
+          style={agent ? {
+            background: agent.gradient,
+            borderColor: `${agent.color}40`,
+          } : {
+            background: 'var(--background)',
+            borderColor: 'var(--border)',
+          }}
+        >
+          {agent ? (
+            <span className="text-base">{agent.icon}</span>
+          ) : (
+            <SparklesIcon size={14} />
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-2 md:gap-4">

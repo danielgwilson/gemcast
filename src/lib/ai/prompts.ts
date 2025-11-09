@@ -1,4 +1,5 @@
 import type { ArtifactKind } from "@/components/artifact";
+import { getAgentById } from "./agents";
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -57,7 +58,21 @@ export const systemPrompt = ({
   requestHints: RequestHints;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  
+  // Check if selectedChatModel is an agent ID
+  const agent = getAgentById(selectedChatModel);
+  
+  if (agent) {
+    // Use agent-specific prompt
+    const basePrompt = agent.prompt;
+    // Only include artifacts prompt for agents that support it (not reasoning-only agents)
+    if (agent.modelId === "chat-model-reasoning") {
+      return `${basePrompt}\n\n${requestPrompt}`;
+    }
+    return `${basePrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  }
 
+  // Legacy model handling
   if (selectedChatModel === "chat-model-reasoning") {
     return `${regularPrompt}\n\n${requestPrompt}`;
   }

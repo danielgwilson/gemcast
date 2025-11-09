@@ -67,7 +67,7 @@ function PureMessages({
     >
       <Conversation className="mx-auto flex min-w-0 max-w-4xl flex-col gap-4 md:gap-6">
         <ConversationContent className="flex flex-col gap-4 px-2 py-4 md:gap-6 md:px-4">
-          {messages.length === 0 && <Greeting />}
+          {messages.length === 0 && <Greeting selectedModelId={selectedModelId} />}
 
           {messages.map((message, index) => (
             <PreviewMessage
@@ -82,6 +82,7 @@ function PureMessages({
               requiresScrollPadding={
                 hasSentMessage && index === messages.length - 1
               }
+              selectedModelId={selectedModelId}
               setMessages={setMessages}
               vote={
                 votes
@@ -92,7 +93,7 @@ function PureMessages({
           ))}
 
           <AnimatePresence mode="wait">
-            {status === "submitted" && <ThinkingMessage key="thinking" />}
+            {status === "submitted" && <ThinkingMessage key="thinking" selectedModelId={selectedModelId} />}
           </AnimatePresence>
 
           <div

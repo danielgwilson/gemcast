@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { agents } from "@/lib/ai/agents";
 
 const textPartSchema = z.object({
   type: z.enum(["text"]),
@@ -14,6 +15,11 @@ const filePartSchema = z.object({
 
 const partSchema = z.union([textPartSchema, filePartSchema]);
 
+// Create enum from agent IDs and legacy model IDs
+const agentIds = agents.map(a => a.id) as [string, ...string[]];
+const legacyModelIds = ["chat-model", "chat-model-reasoning", "chat-model-lite"] as const;
+const allModelIds = [...agentIds, ...legacyModelIds] as [string, ...string[]];
+
 export const postRequestBodySchema = z.object({
   id: z.string().uuid(),
   message: z.object({
@@ -21,7 +27,7 @@ export const postRequestBodySchema = z.object({
     role: z.enum(["user"]),
     parts: z.array(partSchema),
   }),
-  selectedChatModel: z.enum(["chat-model", "chat-model-reasoning", "chat-model-lite"]),
+  selectedChatModel: z.enum(allModelIds),
   selectedVisibilityType: z.enum(["public", "private"]),
 });
 

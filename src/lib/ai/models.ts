@@ -1,4 +1,6 @@
-export const DEFAULT_CHAT_MODEL: string = "chat-model";
+import { agents, getDefaultAgent, type AgentId } from "./agents";
+
+export const DEFAULT_CHAT_MODEL: string = getDefaultAgent().id;
 
 export type ChatModel = {
   id: string;
@@ -6,6 +8,7 @@ export type ChatModel = {
   description: string;
 };
 
+// Legacy models for backward compatibility
 export const chatModels: ChatModel[] = [
   {
     id: "chat-model",
@@ -25,3 +28,10 @@ export const chatModels: ChatModel[] = [
       "Fastest and most cost-efficient multimodal model with great performance",
   },
 ];
+
+// Agent-based models (primary interface)
+export const agentModels: ChatModel[] = agents.map((agent) => ({
+  id: agent.id,
+  name: agent.name,
+  description: agent.description,
+}));

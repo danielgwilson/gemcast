@@ -17,6 +17,7 @@ import { fetchModels } from 'tokenlens/fetch';
 import { getUsage } from 'tokenlens/helpers';
 import { auth, type UserType } from '@/app/(auth)/auth';
 import type { VisibilityType } from '@/components/visibility-selector';
+import { getAgentById } from '@/lib/ai/agents';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import type { ChatModel } from '@/lib/ai/models';
 import { type RequestHints, systemPrompt } from '@/lib/ai/prompts';
@@ -183,17 +184,22 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // Map agent ID to underlying model ID
+    const agent = getAgentById(selectedChatModel);
+    const actualModelId = agent ? agent.modelId : selectedChatModel;
+    const isReasoningModel = actualModelId === 'chat-model-reasoning';
+
     let finalMergedUsage: AppUsage | undefined;
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
         const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
+          model: myProvider.languageModel(actualModelId),
           system: systemPrompt({ selectedChatModel, requestHints }),
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
+            isReasoningModel
               ? []
               : [
                   'getWeather',
@@ -221,7 +227,7 @@ export async function POST(request: Request) {
             try {
               const providers = await getTokenlensCatalog();
               const modelId =
-                myProvider.languageModel(selectedChatModel).modelId;
+                myProvider.languageModel(actualModelId).modelId;
               if (!modelId) {
                 finalMergedUsage = usage;
                 dataStream.write({
