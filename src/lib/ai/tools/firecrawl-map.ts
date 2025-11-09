@@ -29,7 +29,7 @@ export const firecrawlMap = () =>
         if (!process.env.FIRECRAWL_API_KEY) {
           return {
             error:
-              'Firecrawl API key is not configured. Please contact support.',
+              'Firecrawl API key is not configured. Please add FIRECRAWL_API_KEY to your .env.local file. You can get an API key from https://firecrawl.dev',
           };
         }
 

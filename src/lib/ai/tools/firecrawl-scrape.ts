@@ -19,7 +19,7 @@ export const firecrawlScrape = () =>
         if (!process.env.FIRECRAWL_API_KEY) {
           return {
             error:
-              'Firecrawl API key is not configured. Please contact support.',
+              'Firecrawl API key is not configured. Please add FIRECRAWL_API_KEY to your .env.local file. You can get an API key from https://firecrawl.dev',
           };
         }
 
@@ -106,7 +106,7 @@ export const firecrawlScrape = () =>
           ) {
             return {
               error:
-                'AUTHENTICATION FAILED: Invalid Firecrawl API key. Please contact support.',
+                'AUTHENTICATION FAILED: Invalid Firecrawl API key. Please check that your FIRECRAWL_API_KEY in .env.local is correct. You can get an API key from https://firecrawl.dev',
             };
           }
 
